@@ -101,6 +101,8 @@ def parse_short_mount(mount_str, basedir):
         if opt=='ro': mount_opt_dict["read_only"]=True
         elif opt=='rw': mount_opt_dict["read_only"]=False
         elif propagation_re.match(opt): mount_opt_dict["bind"]=dict(propagation=opt)
+        elif opt in {'delegated', 'consistent', 'cached'}:
+            pass # ignore
         else:
             # TODO: ignore
             raise ValueError("unknown mount option "+opt)
@@ -139,7 +141,7 @@ def fix_mount_dict(mount_dict, proj_name, srv_name):
 # ${VARIABLE?err} raise error if not set
 # $$ means $
 
-var_re = re.compile(r'\$(\{(?:[^\s\$:\-\}]+)\}|(?:[^\s\$\{\}]+))')
+var_re = re.compile(r'\$(\{(?:[^\s\$:\-\}]+)\}|(?:[A-Za-z0-9_]+))')
 var_def_re = re.compile(r'\$\{([^\s\$:\-\}]+)(:)?-([^\}]+)\}')
 var_err_re = re.compile(r'\$\{([^\s\$:\-\}]+)(:)?\?([^\}]+)\}')
 
@@ -403,7 +405,12 @@ def mount_desc_to_args(compose, mount_desc, srv_name, cnt_name):
     basedir = compose.dirname
     proj_name = compose.project_name
     shared_vols = compose.shared_vols
-    if is_str(mount_desc): mount_desc=parse_short_mount(mount_desc, basedir)
+    if is_str(mount_desc): 
+        if mount_desc == "":
+            raise ValueError("mount description must not be empty")
+        # print( "str:mount_desc=", repr(mount_desc))
+        mount_desc=parse_short_mount(mount_desc, basedir)
+    # print( "mount_desc=", repr(mount_desc))
     # not needed
     # podman support: podman run --rm -ti --mount type=volume,source=myvol,destination=/delme busybox
     mount_desc = mount_dict_vol_to_bind(compose, fix_mount_dict(mount_desc, proj_name, srv_name))
@@ -502,6 +509,8 @@ def container_to_args(compose, cnt, detached=True, podman_command='run'):
         podman_args.append('-i')
     if cnt.get('tty'):
         podman_args.append('--tty')
+    if cnt.get('static_ip'):
+        podman_args.extend(['--ip', cnt.get('static_ip')])
     ulimit = cnt.get('ulimits', [])
     if ulimit is not None:
         # ulimit can be a single value, i.e. ulimit: host
@@ -600,6 +609,7 @@ def flat_deps(services, with_extends=False):
     """
     for name, srv in services.items():
         deps = set()
+        srv["_deps"] = deps ###
         if with_extends:
             ext = srv.get("extends", {}).get("service", None)
             if ext:
@@ -802,13 +812,14 @@ class PodmanCompose:
         for filename in files:
             with open(filename, 'r') as f:
                 content = yaml.safe_load(f)
-                #print(filename, json.dumps(content, indent = 2))
+                # print(filename, json.dumps(content, indent = 2))
                 content = normalize(content)
-                #print(filename, json.dumps(content, indent = 2))
+                # print(filename, json.dumps(content, indent = 2))
                 content = rec_subs(content, [os.environ, dotenv_dict])
+                # print(filename, json.dumps(content, indent = 2))
                 rec_merge(compose, content)
         # debug mode
-        if len(files)>1:
+        if len(files)>1:  # if True or len(files)>1:
             print(" ** merged:\n", json.dumps(compose, indent = 2))
         ver = compose.get('version')
         services = compose.get('services')
