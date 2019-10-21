@@ -512,12 +512,12 @@ def container_to_args(compose, cnt, detached=True, podman_command='run'):
     if cnt.get('networks'):
         nwks = cnt.get('networks')
         for n in nwks:
-            if (!hasattr(n, 'keys') && n not in compose.networks) || n.keys()[0] not in compose.networks:
+            if (not hasattr(n, 'keys') and n not in compose.networks) or (hasattr(n, 'keys') and list(n.keys())[0] not in compose.networks):
                 raise ValueError('Service network must also be specified in networks')
-            if (!hasattr(n, 'values')):
+            if (not hasattr(n, 'values')):
                 continue
             for prop in n.values():
-                if hasattr(prop, keys) && 'ipv4_address' in prop:
+                if hasattr(prop, keys) and 'ipv4_address' in prop:
                     podman_args.extend(['--ip', prop['ipv4_address']])
 
     if cnt.get('static_ip'):
@@ -837,7 +837,7 @@ class PodmanCompose:
         networks = compose.get('networks', {})
         if len(networks) > 1:
             # TODO support more networks when podman does
-            throw ValueError('podman-compose currently supports a maximum of 1 network')
+            raise ValueError('podman-compose currently supports a maximum of 1 network')
         self.networks = {}
         for n in networks.keys():
             self.networks[n] = networks[n].get('config', {}).get('ip_range')
@@ -1071,9 +1071,10 @@ def compose_up(compose, args):
         compose.commands['build'](compose, build_args)
 
     # we should be using named networks, but can't with podman as of 2019-10-21
-    if len(podman_compose.networks == 1) && podman_compose.networks.values()[0]: 
-        compose.podman.run(['network', 'remove', 'podman'])
-        compose.podman.run(['network', 'create', 'podman', '--subnet', podman_compose.networks.values()[0]])
+    if len(podman_compose.networks) == 1 and list(podman_compose.networks.values())[0]: 
+        compose.podman.run(['network', 'rm', 'podman'])
+        print(list(podman_compose.networks.values())[0])
+        compose.podman.run(['network', 'create', 'podman', '--subnet', list(podman_compose.networks.values())[0]['ipam']['config'][0]['subnet']]) #fixme plz default to no subnet
     
     shared_vols = compose.shared_vols
     
