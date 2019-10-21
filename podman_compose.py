@@ -511,8 +511,6 @@ def container_to_args(compose, cnt, detached=True, podman_command='run'):
         podman_args.append('--tty')
     if cnt.get('networks'):
         nwks = cnt.get('networks')
-        if len(nwks) > 1:
-            raise ValueError('podman-compose currently supports a maximum of 1 network ')
         for n in nwks:
             if (!hasattr(n, 'keys') && n not in compose.networks) || n.keys()[0] not in compose.networks:
                 raise ValueError('Service network must also be specified in networks')
@@ -838,8 +836,12 @@ class PodmanCompose:
         ver = compose.get('version')
         networks = compose.get('networks', {})
         if len(networks) > 1:
+            # TODO support more networks when podman does
             throw ValueError('podman-compose currently supports a maximum of 1 network')
-        self.networks = networks.keys()
+        self.networks = {}
+        for n in networks.keys():
+            self.networks[n] = networks[n].get('config', {}).get('ip_range')
+        self.networks = networks
         # TODO actually read the network properties, instead of just looking for static ips. (networks: {driver: ...})
         services = compose.get('services')
         # NOTE: maybe add "extends.service" to _deps at this stage
@@ -1067,6 +1069,11 @@ def compose_up(compose, args):
             **args.__dict__,
         )
         compose.commands['build'](compose, build_args)
+
+    # we should be using named networks, but can't with podman as of 2019-10-21
+    if len(podman_compose.networks == 1) && podman_compose.networks.values()[0]: 
+        compose.podman.run(['network', 'remove', 'podman'])
+        compose.podman.run(['network', 'create', 'podman', '--subnet', podman_compose.networks.values()[0]])
     
     shared_vols = compose.shared_vols
     
