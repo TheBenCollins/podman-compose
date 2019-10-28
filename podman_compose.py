@@ -512,13 +512,10 @@ def container_to_args(compose, cnt, detached=True, podman_command='run'):
     if cnt.get('networks'):
         nwks = cnt.get('networks')
         for n in nwks:
-            if (not hasattr(n, 'keys') and n not in compose.networks) or (hasattr(n, 'keys') and list(n.keys())[0] not in compose.networks):
+            if (n not in compose.networks)):
                 raise ValueError('Service network must also be specified in networks')
-            if (not hasattr(n, 'values')):
-                continue
-            for prop in n.values():
-                if hasattr(prop, keys) and 'ipv4_address' in prop:
-                    podman_args.extend(['--ip', prop['ipv4_address']])
+            if 'ipv4_address' in nwks[n]:
+                podman_args.extend(['--ip', nwks[n]['ipv4_address']])
 
     if cnt.get('static_ip'):
         podman_args.extend(['--ip', cnt.get('static_ip')])
