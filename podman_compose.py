@@ -512,7 +512,7 @@ def container_to_args(compose, cnt, detached=True, podman_command='run'):
     if cnt.get('networks'):
         nwks = cnt.get('networks')
         for n in nwks:
-            if (n not in compose.networks)):
+            if (n not in compose.networks):
                 raise ValueError('Service network must also be specified in networks')
             if 'ipv4_address' in nwks[n]:
                 podman_args.extend(['--ip', nwks[n]['ipv4_address']])
