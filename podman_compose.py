@@ -646,14 +646,18 @@ class Podman:
         cmd = [self.podman_path]+podman_args
         return subprocess.check_output(cmd)
 
-    def run(self, podman_args, wait=True, sleep=1):
+    def run(self, podman_args, cnt_name='DEFAULT', output_cmd='None', wait=True, sleep=1):
         podman_args_str = [str(arg) for arg in podman_args]
         print("podman " + " ".join(podman_args_str))
         if self.dry_run:
             return None
         cmd = [self.podman_path]+podman_args_str
         # subprocess.Popen(args, bufsize = 0, executable = None, stdin = None, stdout = None, stderr = None, preexec_fn = None, close_fds = False, shell = False, cwd = None, env = None, universal_newlines = False, startupinfo = None, creationflags = 0)
-        p = subprocess.Popen(cmd)
+        if output_cmd and output_cmd != 'None':
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            output = subprocess.Popen(output_cmd+["service_"+cnt_name], stdin=p.stdout)
+        else:
+            p = subprocess.Popen(cmd)
         if wait:
             print(p.wait())
         if sleep:
@@ -945,6 +949,9 @@ class PodmanCompose:
         parser.add_argument("-t", "--transform_policy",
                             help="how to translate docker compose to podman [1pod|hostnet|accurate]",
                             choices=['1pod', '1podfw', 'hostnet', 'cntnet', 'publishall', 'identity'], default='1podfw')
+        parser.add_argument("--output-cmd",
+                            help="",
+                            type=str, default="")
 
 podman_compose = PodmanCompose()
 
@@ -1070,9 +1077,9 @@ def compose_up(compose, args):
 
     # we should be using named networks, but can't with podman as of 2019-10-21
     if len(podman_compose.networks) == 1 and list(podman_compose.networks.values())[0]: 
-        compose.podman.run(['network', 'rm', 'podman'])
+        compose.podman.run(['network', 'rm', 'podman'], "podman_network")
         print(list(podman_compose.networks.values())[0])
-        compose.podman.run(['network', 'create', 'podman', '--subnet', list(podman_compose.networks.values())[0]['ipam']['config'][0]['subnet']]) #fixme plz default to no subnet
+        compose.podman.run(['network', 'create', 'podman', '--subnet', list(podman_compose.networks.values())[0]['ipam']['config'][0]['subnet']], "podman_network") #fixme plz default to no subnet
     
     shared_vols = compose.shared_vols
     
@@ -1084,10 +1091,14 @@ def compose_up(compose, args):
     podman_command = 'run' if args.detach and not args.no_start else 'create'
 
     create_pods(compose, args)
+
+    output_cmd = args.output_cmd.split()
+
     for cnt in compose.containers:
         podman_args = container_to_args(compose, cnt,
             detached=args.detach, podman_command=podman_command)
-        compose.podman.run(podman_args)
+        compose.podman.run(podman_args, cnt['name'], output_cmd)
+    
     if args.no_start or args.detach or args.dry_run: return
     # TODO: handle already existing
     # TODO: if error creating do not enter loop
