@@ -656,7 +656,7 @@ class Podman:
         if output_cmd and output_cmd != 'None':
             # enable stdout for primary process and pass it to output process, appending container name to end of output command
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            output = subprocess.Popen(output_cmd+[" service_"+cnt_name], stdin=p.stdout)
+            output = subprocess.Popen(output_cmd+["service_"+cnt_name], stdin=p.stdout)
         else:
             p = subprocess.Popen(cmd)
         if wait:
