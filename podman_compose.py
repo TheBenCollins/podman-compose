@@ -1099,10 +1099,28 @@ def compose_up(compose, args):
 
     output_cmd = args.output_cmd.split()
 
+#    for cnt in compose.containers:
+#        podman_args = container_to_args(compose, cnt,
+#            detached=args.detach, podman_command=podman_command)
+#        compose.podman.run(podman_args, cnt['name'], output_cmd)
+
+# TODO clean up this execution and allow it to flow past
+    threads_run = []
     for cnt in compose.containers:
         podman_args = container_to_args(compose, cnt,
             detached=args.detach, podman_command=podman_command)
-        compose.podman.run(podman_args, cnt['name'], output_cmd)
+        # TODO: remove sleep from podman.run
+        thread = Thread(target=compose.podman.run, args=[podman_args+[cnt['name'], output_cmd]], daemon=True)
+        thread.start()
+        threads_run.append(thread)
+        time.sleep(1)
+    while True:
+        for thread in threads_run:
+            thread.join(timeout=1.0)
+            if thread.is_alive(): continue
+            if args.abort_on_container_exit:
+                exit(-1)
+
     
     if args.no_start or args.detach or args.dry_run: return
     # TODO: handle already existing
