@@ -953,6 +953,10 @@ class PodmanCompose:
         parser.add_argument("--output-cmd",
                             help="",
                             type=str, default="")
+        parser.add_argument("--run-only",
+                            help="",
+                            type=bool,
+                            default=True)
 
 podman_compose = PodmanCompose()
 
@@ -1089,7 +1093,7 @@ def compose_up(compose, args):
         compose.commands['down'](compose, args)
     # args.no_recreate disables check for changes (which is not implemented)
 
-    podman_command = 'run' if args.detach and not args.no_start else 'create'
+    podman_command = 'run' if (args.detach and not args.no_start) or args.run_only else 'create'
 
     create_pods(compose, args)
 
