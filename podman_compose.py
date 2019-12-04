@@ -653,12 +653,12 @@ class Podman:
             return None
         cmd = [self.podman_path]+podman_args_str
         # subprocess.Popen(args, bufsize = 0, executable = None, stdin = None, stdout = None, stderr = None, preexec_fn = None, close_fds = False, shell = False, cwd = None, env = None, universal_newlines = False, startupinfo = None, creationflags = 0)
-#        if output_cmd and output_cmd != 'None':
+        if output_cmd and output_cmd != 'None':
             # enable stdout for primary process and pass it to output process, appending container name to end of output command
-#            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-#            output = subprocess.Popen(output_cmd+["service_"+cnt_name], stdin=p.stdout)
-#        else:
-            p = subprocess.Popen(cmd)
+            p = subprocess.Popen(cmd+["||", "echo", "podman compose exit with error code: ", "$?"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            output = subprocess.Popen(output_cmd+["service_"+cnt_name], stdin=p.stdout)
+        else:
+            p = subprocess.Popen(cmd):
         if wait:
             print(p.wait())
         if sleep:
@@ -1093,7 +1093,8 @@ def compose_up(compose, args):
         compose.commands['down'](compose, args)
     # args.no_recreate disables check for changes (which is not implemented)
 
-    podman_command = 'run' if args.detach and not args.no_start else 'create'
+    podman_command = 'run' if (args.detach and not args.no_start) or args.run_only else 'create'
+    podman_wait = False if args.run_only else True
 
     create_pods(compose, args)
 
@@ -1102,27 +1103,9 @@ def compose_up(compose, args):
     for cnt in compose.containers:
         podman_args = container_to_args(compose, cnt,
             detached=args.detach, podman_command=podman_command)
-        compose.podman.run(podman_args, cnt['name'], output_cmd)
-
-# TODO clean up this execution and allow it to flow past
-#    threads_run = []
-#    for cnt in compose.containers:
-#        podman_args = container_to_args(compose, cnt,
-#            detached=args.detach, podman_command=podman_command)
-#        # TODO: remove sleep from podman.run
-#        thread = Thread(target=compose.podman.run, args=[podman_args+[cnt['name'], output_cmd]], daemon=True)
-#        thread.start()
-#        threads_run.append(thread)
-#        time.sleep(1)
-#    while True:
-#        for thread in threads_run:
-#            thread.join(timeout=1.0)
-#            if thread.is_alive(): continue
-#            if args.abort_on_container_exit:
-#                exit(-1)
-
+        compose.podman.run(podman_args, cnt['name'], output_cmd, wait=podman_wait)
     
-    if args.no_start or args.detach or args.dry_run: return
+    if args.no_start or args.detach or args.dry_run or args.run_only: return
     # TODO: handle already existing
     # TODO: if error creating do not enter loop
     # TODO: colors if sys.stdout.isatty()
