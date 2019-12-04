@@ -658,7 +658,7 @@ class Podman:
             p = subprocess.Popen(cmd+["||", "echo", "podman compose exit with error code: ", "$?"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             output = subprocess.Popen(output_cmd+["service_"+cnt_name], stdin=p.stdout)
         else:
-            p = subprocess.Popen(cmd):
+            p = subprocess.Popen(cmd)
         if wait:
             print(p.wait())
         if sleep:
