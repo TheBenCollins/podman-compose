@@ -100,6 +100,8 @@ def parse_short_mount(mount_str, basedir):
     for opt in mount_opts:
         if opt=='ro': mount_opt_dict["read_only"]=True
         elif opt=='rw': mount_opt_dict["read_only"]=False
+        elif opt=='exec': mount_opt_dict["exec"]=True
+        elif opt=='noexec': mount_opt_dict["exec"]=False
         elif propagation_re.match(opt): mount_opt_dict["bind"]=dict(propagation=opt)
         elif opt in {'delegated', 'consistent', 'cached'}:
             pass # ignore
@@ -422,6 +424,8 @@ def mount_desc_to_args(compose, mount_desc, srv_name, cnt_name):
         bind_prop=mount_desc["bind"].get("propagation")
         if bind_prop: opts.append("bind-propagation={}".format(bind_prop))
     if mount_desc.get("read_only", False): opts.append("ro")
+    if mount_desc.get("exec", False): opts.append("exec")
+
     if mount_type=='tmpfs':
         tmpfs_opts = mount_desc.get("tmpfs", {})
         tmpfs_size = tmpfs_opts.get("size")
