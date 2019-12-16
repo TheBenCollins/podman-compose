@@ -655,7 +655,9 @@ class Podman:
         # subprocess.Popen(args, bufsize = 0, executable = None, stdin = None, stdout = None, stderr = None, preexec_fn = None, close_fds = False, shell = False, cwd = None, env = None, universal_newlines = False, startupinfo = None, creationflags = 0)
         if output_cmd and output_cmd != 'None':
             # enable stdout for primary process and pass it to output process, appending container name to end of output command
-            p = subprocess.Popen(cmd+["||", "echo", "podman compose exit with error code: ", "$?"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            # TODO revisit capturing podman command failure
+            # p = subprocess.Popen(cmd+["||", "echo", "podman compose exit with error code: ", "$?"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             output = subprocess.Popen(output_cmd+["service_"+cnt_name], stdin=p.stdout)
         else:
             p = subprocess.Popen(cmd)
