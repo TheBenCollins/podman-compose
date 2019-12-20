@@ -1087,7 +1087,7 @@ def compose_up(compose, args):
         compose.commands['build'](compose, build_args)
 
     # we should be using named networks, but can't with podman as of 2019-10-21
-    if len(podman_compose.networks) == 1 and list(podman_compose.networks.values())[0]: 
+    if args.create_network == True and len(podman_compose.networks) == 1 and list(podman_compose.networks.values())[0]: 
         compose.podman.run(['network', 'rm', 'podman'], "podman_network")
         print(list(podman_compose.networks.values())[0])
         compose.podman.run(['network', 'create', 'podman', '--subnet', list(podman_compose.networks.values())[0]['ipam']['config'][0]['subnet']], "podman_network") #fixme plz default to no subnet
@@ -1203,7 +1203,7 @@ def compose_start(compose, args):
 
 @cmd_run(podman_compose, 'stop', 'stop specific services')
 def compose_stop(compose, args):
-    transfer_service_status(compose, args, 'start')
+    transfer_service_status(compose, args, 'stop')
 
 @cmd_run(podman_compose, 'restart', 'restart specific services')
 def compose_restart(compose, args):
@@ -1237,7 +1237,7 @@ def compose_up_parse(parser):
         help="Build images before starting containers.")
     parser.add_argument("--abort-on-container-exit", action='store_true',
         help="Stops all containers if any container was stopped. Incompatible with -d.")
-    parser.add_argument("-t", "--timeout", type=float, default=10,
+    parser.add_argument("-t", "--timeout", type=int, default=10,
         help="Use this timeout in seconds for container shutdown when attached or when containers are already running. (default: 10)")
     parser.add_argument("-V", "--renew-anon-volumes", action='store_true',
         help="Recreate anonymous volumes instead of retrieving data from the previous containers.")
@@ -1249,6 +1249,8 @@ def compose_up_parse(parser):
         help="Return the exit code of the selected service container. Implies --abort-on-container-exit.")
     parser.add_argument('services', metavar='SERVICES', nargs='*',
         help='service names to start')
+    parser.add_argument("--create-network", type=bool, default=False,
+        help="Delete and then create podman network based on docker compose network subnet")
 
 
 @cmd_parse(podman_compose, 'run')
@@ -1288,7 +1290,7 @@ def compose_run_parse(parser):
 def compose_parse_timeout(parser):
     parser.add_argument("-t", "--timeout",
         help="Specify a shutdown timeout in seconds. ",
-        type=float, default=10)
+        type=int, default=10)
 
 @cmd_parse(podman_compose, ['start', 'stop', 'restart'])
 def compose_parse_services(parser):
