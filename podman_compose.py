@@ -1088,7 +1088,16 @@ def compose_up(compose, args):
 
     # we should be using named networks, but can't with podman as of 2019-10-21
     if args.create_network == True and len(podman_compose.networks) == 1 and list(podman_compose.networks.values())[0]: 
-        compose.podman.run(['network', 'rm', 'podman'], "podman_network")
+        
+        network_list = subprocess.Popen(["podman", "network", "ls"], stdout=subprocess.PIPE, shell=False)
+        network_count = subprocess.Popen(["wc", "-l"], stdin=network_list.stdout, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        (network_count_output, network_count_err) = network_count.communicate()
+        network_count_status = network_count.wait()
+        print("The network count is", int(network_count_output.decode('utf-8')))
+
+        if int(network_count_output.decode('utf-8')) >= 2:
+            compose.podman.run(['network', 'rm', 'podman'], "podman_network")
+        
         print(list(podman_compose.networks.values())[0])
         compose.podman.run(['network', 'create', 'podman', '--subnet', list(podman_compose.networks.values())[0]['ipam']['config'][0]['subnet']], "podman_network") #fixme plz default to no subnet
     
