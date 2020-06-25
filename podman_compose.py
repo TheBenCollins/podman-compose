@@ -499,8 +499,8 @@ def container_to_args(compose, cnt, detached=True, podman_command='run'):
     if cnt.get('publishall'):
         podman_args.append('-P')
 # ignore the localhost port bindings 
-#    for i in cnt.get('ports', []):
-#        podman_args.extend(['-p', i])
+    for i in cnt.get('ports', []):
+        podman_args.extend(['-p', i])
     user = cnt.get('user')
     if user is not None:
         podman_args.extend(['-u', user])
