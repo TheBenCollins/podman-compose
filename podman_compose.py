@@ -512,8 +512,12 @@ def container_to_args(compose, cnt, detached=True, podman_command='run'):
         podman_args.extend(['--shm_size', '{}'.format(cnt.get('shm_size'))])
     if cnt.get('stdin_open'):
         podman_args.append('-i')
-    if cnt.get('tty'):
-        podman_args.append('--tty')
+    # if cnt.get('tty'):
+    #    podman_args.append('--tty')
+
+    # Always enable TTY
+    podman_args.append('--tty')
+
     if cnt.get('networks'):
         nwks = cnt.get('networks')
         for n in nwks:
